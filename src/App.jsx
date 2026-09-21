@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Analytics } from '@vercel/analytics/react';
 import GameCanvas from './components/GameCanvas.jsx';
 import HUD from './components/HUD.jsx';
 import DialogueBox from './components/DialogueBox.jsx';
@@ -222,6 +223,7 @@ export default function App() {
           </div>
         </Modal>
       )}
+      <Analytics />
     </div>
   );
 }
