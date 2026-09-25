@@ -4,8 +4,8 @@ import { hintFor } from '../data/sources.js';
 import { pickUndiscovered, totalDuplicates, completionPercent } from './progression.js';
 
 export const OFFERS = [
-  { id: 'swap_common', title: 'Coin Swap', desc: 'Trade 3 duplicates for a random undiscovered Common or Uncommon currency.', cost: 3, rarities: ['Common', 'Uncommon'] },
-  { id: 'swap_rare', title: 'Collector\'s Bundle', desc: 'Trade 8 duplicates for a random undiscovered Rare currency.', cost: 8, rarities: ['Rare'] },
+  { id: 'swap_common', title: 'Coin Swap', desc: 'Exchange duplicates for the displayed Common or Uncommon currency.', cost: 3, rarities: ['Common', 'Uncommon'] },
+  { id: 'swap_rare', title: 'Collector\'s Bundle', desc: 'Exchange duplicates for the displayed Rare currency.', cost: 8, rarities: ['Rare'] },
   { id: 'hint', title: 'Insider Hint', desc: 'Trade 1 duplicate for a tip about where an undiscovered currency is hiding.', cost: 1 },
 ];
 
@@ -28,11 +28,12 @@ export function getTradeInfo(game) {
   return {
     total,
     dupes,
-    offers: OFFERS.map((o) => ({
+    offers: OFFERS.map((original) => { const o={...original,cost:Math.max(1,original.cost-((s.progression.friendship.money_collector||0)>=3?1:0))}; return ({
       ...o,
+      preview:o.rarities?pickUndiscovered(s,o.rarities,()=>0)?.name:null,
       affordable: total >= o.cost,
       remaining: o.rarities ? (pickUndiscovered(s, o.rarities) ? true : false) : pickUndiscovered(s, ['Common', 'Uncommon', 'Rare', 'Epic']) !== null,
-    })),
+    }); }),
     milestones: MILESTONES.map((m) => ({ ...m, reached: pct >= m.percent, claimed: !!s.claimed[m.id] })),
     percent: pct,
   };
@@ -53,12 +54,13 @@ function payDuplicates(s, cost) {
 
 export function doTrade(game, offerId) {
   const s = game.s;
-  const offer = OFFERS.find((o) => o.id === offerId);
+  const original = OFFERS.find((o) => o.id === offerId);
+  const offer=original?{...original,cost:Math.max(1,original.cost-((s.progression.friendship.money_collector||0)>=3?1:0))}:null;
   if (!offer) return { ok: false, message: 'Unknown trade.' };
   if (totalDuplicates(s) < offer.cost) return { ok: false, message: `You need ${offer.cost} duplicate${offer.cost > 1 ? 's' : ''} for that.` };
 
   if (offer.id === 'hint') {
-    const cur = pickUndiscovered(s, ['Common', 'Uncommon', 'Rare', 'Epic', 'Legendary'], game.rnd);
+    const cur = pickUndiscovered(s, ['Common', 'Uncommon', 'Rare', 'Epic', 'Legendary'], ()=>0);
     if (!cur) return { ok: false, message: 'There is nothing left to hint about. You have everything!' };
     payDuplicates(s, offer.cost);
     game.touch();
@@ -66,7 +68,7 @@ export function doTrade(game, offerId) {
     return { ok: true, message: `Tip for a missing ${cur.rarity} ${cur.type.toLowerCase()}: ${hintFor(cur)}` };
   }
 
-  const cur = pickUndiscovered(s, offer.rarities, game.rnd);
+  const cur = pickUndiscovered(s, offer.rarities, ()=>0);
   if (!cur) return { ok: false, message: 'You already own every currency of that kind. Nothing to trade for!' };
   payDuplicates(s, offer.cost);
   game.discover(cur.id, { source: 'trade', silent: true });
@@ -86,7 +88,7 @@ export function claimMilestone(game, id) {
     game.save();
     return { ok: true, message: 'The Collector whispers: "Beyond the cave lie the ruins. On the far east side of the ruins, a sealed gate opens only for near-complete collectors. Behind it: four legends."' };
   }
-  const cur = pickUndiscovered(s, m.rarities, game.rnd);
+  const cur = pickUndiscovered(s, m.rarities, ()=>0);
   if (!cur) {
     game.touch();
     game.save();

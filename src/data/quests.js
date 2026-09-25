@@ -119,4 +119,21 @@ export const QUESTS = {
   },
 };
 
+const chain = [
+  ['mystery_1','An Old Beginning','money_collector','town','Find an old Philippine coin and show the collector.',{discovered:'phpold'}],
+  ['mystery_2','The Curator Knows','dr_reyes','museum','Speak with the Museum Curator about the old coin.',{flag:'met:dr_reyes'}],
+  ['mystery_3','A Hidden Map','money_collector','forest','Search the clearing south of the forest pond for a hidden map.',{collected:'forest_cache_2'}],
+  ['mystery_4','Story in Stone','dr_reyes','ruins','Read the sun mural in the Ancient Ruins.',{flag:'saw_mu_sun'}],
+  ['mystery_5','A Legendary Conclusion','money_collector','town','Find a Legendary currency and return to the collector.',{rarity:{rarity:'Legendary',count:1}}],
+];
+chain.forEach(([id,name,giver,area,summary,done],i)=>{
+  QUESTS[id]={id,name:`The Collector’s Mystery · ${i+1}: ${name}`,chain:'collector_mystery',kind:'story',giver,area,summary,
+    available:i?{questDone:chain[i-1][0]}:{percent:10},
+    objectives:[{id:'find',text:summary,done,where:area},{id:'return',text:'Report to your quest giver.',turnIn:true,where:giver==='dr_reyes'?'museum':'town'}],
+    rewards:{xp:i===4?750:150,coins:i===4?750:100,...(i===2?{items:['mystery_map']}:{}) ,...(i===4?{cosmetics:['ancient_explorer'],titles:['legendary_collector']}:{})},
+    rewardText:i===4?'750 XP · 750 Hunter Coins · Ancient Explorer Outfit · Legendary Collector title':'150 XP · 100 Hunter Coins'+(i===2?' · The Collector’s Map':''),
+  };
+});
+QUESTS.final_journey={id:'final_journey',name:'The Treasury of Worlds',kind:'story',giver:'money_collector',area:'final',available:{complete:true},summary:'Visit the golden monument in the Treasury of Worlds, then return to the collector.',objectives:[{id:'visit',text:'Read the final monument.',done:{flag:'final_monument_read'},where:'final'},{id:'return',text:'Return to the Money Collector.',turnIn:true,where:'town'}],rewards:{xp:1000,coins:1000},rewardText:'1,000 XP · 1,000 Hunter Coins'};
+for(const q of Object.values(QUESTS)) { q.kind ||= 'side'; q.rewards.xp ??= 150; q.rewards.coins ??= 100; }
 export const QUEST_LIST = Object.values(QUESTS);

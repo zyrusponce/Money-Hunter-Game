@@ -14,7 +14,7 @@ Explore -> Search -> Discover Money -> Add to Encyclopedia -> Unlock New Locatio
 
 ## Quick start
 
-You need [Node.js](https://nodejs.org) 18 or newer.
+You need Node.js 22.12 or newer (verified with Node 24).
 
 ```bash
 npm install
@@ -34,6 +34,7 @@ npm run preview    # optional: serve ./dist locally to test it
 
 ```bash
 npm run check
+npm run test:rewards
 ```
 
 This runs two Node scripts that need no browser:
@@ -51,10 +52,11 @@ Run it after you edit maps or currency data.
 | --- | --- |
 | `WASD` / Arrow keys | Move (hold `Shift` to run) |
 | `E` / `Space` / `Enter` | Interact: talk, search, dig, open, read, continue |
-| `B` | Money Encyclopedia |
+| `C` | Money Encyclopedia |
 | `M` | World Map |
-| `Q` | Quests |
-| `I` | Inventory |
+| `J` / `Q` | Quests |
+| `B` / `I` | Inventory |
+| `1` / `2` / `3` / `4` | Detector / Shovel / Flashlight / Treasure Maps |
 | `Esc` | Pause menu |
 
 On phones and tablets an on-screen joystick and **A** button appear automatically (you can force them on or off in Settings).
@@ -79,7 +81,13 @@ On phones and tablets an on-screen joystick and **A** button appear automaticall
 
 Abandoned Building needs the Rusty Key (from a quest) and Coral Isle needs the Boat Pass (from a quest).
 
-**Duplicates:** finding money you already own stores a duplicate. Trade duplicates with **The Money Collector** in Sunny Town for new currency, hints and milestone prizes.
+**Explorer rewards:** discoveries, quests, secrets, chests, collections and exploration earn Explorer XP and fictional Hunter Coins. Levels award Upgrade Points. Spend coins in the Explorer Shop and points across three skill branches. There are no real-money purchases or timed streak penalties. Small collections grant scaled rewards; larger sets grant up to 500 XP and coins, an outfit and a badge.
+
+**Duplicates:** sell extras from the Backpack, trade with **The Money Collector**, or give them to nearby friends. Currency entries remain in the Encyclopedia.
+
+**More to explore:** authored treasure chests and clue maps, a five-part Collector's Mystery, optional friendships, persistent world requests, area mastery, world milestones and a final quest. The Progress journal, Achievement Gallery and Statistics page track your adventure using actual catalog totals.
+
+**Accessibility:** Settings includes remappable letter/number controls, UI and text scale, high contrast, reduced motion, animation intensity, screen shake and separate audio volumes. Menus support keyboard focus and mobile layouts. Tool 4 opens your treasure clues; touch controls include movement, interaction, Tool and Menu.
 
 ---
 
@@ -156,6 +164,10 @@ Sound effects and music are generated with the Web Audio API and need a user ges
 Progress is stored in the browser's **LocalStorage** under `moneyhunter.save.v1` (settings under `moneyhunter.settings.v1`). It autosaves every 20 seconds, on every important event (a discovery, a quest, opening a secret, changing area) and from the pause menu. Clearing site data or **Settings > Reset save** deletes it.
 
 Saved: player position and area, discovered money, duplicates, inventory and tools, unlocked areas, active and completed quests, opened secrets, puzzle progress and playtime.
+
+Version-two saves also retain rewards, purchases, skills, cosmetics, friendships, claims and explored cells. Existing version-one adventures migrate once without losing collections. Corrupt or unsupported saves show a retry message and preserve their stored bytes. Settings and progress remain local to this browser.
+
+Verification details and browser coverage: [reward-overhaul verification](docs/reward-overhaul-verification.md). The optional `node scripts/browser-check.mjs` uses a development server on port 5173 and an isolated Chromium debugging profile on port 9222; it resets that test profile's game data.
 
 ## Tips for developers
 

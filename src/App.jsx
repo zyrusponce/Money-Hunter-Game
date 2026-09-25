@@ -15,13 +15,23 @@ import HowToPlay from './components/HowToPlay.jsx';
 import TradeMenu from './components/TradeMenu.jsx';
 import EndingScreen from './components/EndingScreen.jsx';
 import Modal from './components/Modal.jsx';
+import RewardFeed from './components/RewardFeed.jsx';
+import ExplorerShop from './components/ExplorerShop.jsx';
+import SkillTree from './components/SkillTree.jsx';
+import AchievementGallery from './components/AchievementGallery.jsx';
+import ProgressMenu from './components/ProgressMenu.jsx';
+import ProfilePicker from './components/ProfilePicker.jsx';
+import Statistics from './components/Statistics.jsx';
+import SocialMenu from './components/SocialMenu.jsx';
+import SaveSummary from './components/SaveSummary.jsx';
 import { useTouchMode } from './components/hooks.js';
 import { audio } from './game/audio.js';
-import { clearSave, loadSave, loadSettings, saveSettings } from './game/saveSystem.js';
+import { clearSave, loadSave, readSave, loadSettings, saveSettings, normalizeSettings } from './game/saveSystem.js';
+import { actionForCode } from './game/controls.js';
 import { createNewState } from './game/state.js';
 import { snapshotFromState } from './game/snapshot.js';
 
-const HOTKEYS = { KeyB: 'encyclopedia', KeyM: 'map', KeyQ: 'quests', KeyI: 'inventory' };
+const MENU_ACTIONS = new Set(['encyclopedia','map','quests','inventory']);
 
 export default function App() {
   const [screen, setScreen] = useState('menu'); // 'menu' | 'playing'
@@ -30,6 +40,11 @@ export default function App() {
   const [stack, setStack] = useState([]); // open overlays, top is last
   const [settings, setSettings] = useState(loadSettings);
   const [save, setSave] = useState(() => loadSave());
+  const [saveStatus,setSaveStatus]=useState(()=>readSave());
+  const [revision,setRevision]=useState(0);
+  const [entry,setEntry]=useState(null);
+  const [sessionSummary,setSessionSummary]=useState(null);
+  const sessionStart=useRef(null);
   const [game, setGame] = useState(null);
   const [savedNote, setSavedNote] = useState('');
   const [confirmNew, setConfirmNew] = useState(false);
@@ -37,7 +52,8 @@ export default function App() {
   const touch = useTouchMode(settings.touch);
 
   // ---- overlays
-  const open = useCallback((name) => {
+  const open = useCallback((name,entryId=null) => {
+    if(name==='encyclopedia') {setEntry(entryId);const g=gameRef.current;if(g&&g.s.progression.tutorial==='encyclopedia'){g.s.progression.tutorial='done';g.hud(true);g.save();}}
     setStack((s) => (s[s.length - 1] === name ? s : [...s, name]));
     if (gameRef.current) gameRef.current.setPaused(true);
   }, []);
@@ -62,6 +78,7 @@ export default function App() {
       setStack((s) => [...s, name]);
     });
   }, [game]);
+  useEffect(()=>game?.on('change',()=>setRevision(r=>r+1)),[game]);
 
   // ---- audio: browsers need a user gesture before sound can start
   useEffect(() => {
@@ -74,7 +91,13 @@ export default function App() {
     };
   }, []);
   useEffect(() => {
-    audio.setVolumes(settings.music, settings.sfx);
+    audio.setVolumes(settings.master*settings.music, settings.master*settings.sfx);
+    gameRef.current?.setSettings(settings);
+    const root=document.documentElement;
+    root.style.setProperty('--ui-scale',settings.uiScale);
+    root.style.setProperty('--text-scale',settings.textScale);
+    root.dataset.motion=settings.reducedMotion||settings.animationIntensity===0?'reduced':'full';
+    root.dataset.contrast=settings.highContrast?'high':'normal';
   }, [settings]);
   useEffect(() => {
     if (screen === 'menu') audio.music('menu');
@@ -91,11 +114,13 @@ export default function App() {
       if (e.code === 'Escape') {
         e.preventDefault();
         if (stack.length) close();
+        else if(gameRef.current?.rt.mode==='popup')gameRef.current.dismissPopup();
         else if (screen === 'playing') open('pause');
         return;
       }
       if (screen !== 'playing' || e.repeat) return;
-      const name = HOTKEYS[e.code];
+      const action=actionForCode(settings.bindings,e.code);
+      const name = MENU_ACTIONS.has(action)?action:null;
       if (!name) return;
       if (stack.length) {
         if (stack[stack.length - 1] === name) close();
@@ -106,30 +131,36 @@ export default function App() {
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [screen, stack, open, close]);
+  }, [screen, stack, open, close,settings.bindings]);
 
   // ---- game flow
   const startNew = () => {
-    clearSave();
+    if(!clearSave()){setSavedNote('Unable to replace save data. Please try again.');return;}
     setSave(null);
     setStartState(null);
     setStack([]);
     setSession((n) => n + 1);
     setScreen('playing');
     setConfirmNew(false);
+    sessionStart.current=snapshotFromState(createNewState());
   };
-  const onNew = () => (save ? setConfirmNew(true) : startNew());
+  const onNew = () => (save || ['corrupt','unsupported','unavailable'].includes(saveStatus.status) ? setConfirmNew(true) : startNew());
   const onContinue = () => {
-    const st = loadSave();
-    if (!st) return;
+    const result=readSave();setSaveStatus(result);
+    const st = result.state;
+    if (!st) {setStack([]);return;}
+    sessionStart.current=snapshotFromState(st);
     setStartState(st);
     setStack([]);
     setSession((n) => n + 1);
     setScreen('playing');
   };
   const toMainMenu = () => {
+    const latest=gameRef.current?.getSnapshot(),start=sessionStart.current;
+    if(latest&&start)setSessionSummary({currencies:latest.count-start.count,quests:latest.quests.done.length-start.quests.done.length,secrets:latest.stats.secretsFound-start.stats.secretsFound,xp:latest.progression.xp-start.progression.xp,coins:latest.progression.coinsEarned-start.progression.coinsEarned,from:start.percent,to:latest.percent});
     if (gameRef.current) gameRef.current.save();
     setSave(loadSave());
+    setSaveStatus(readSave());
     setStack([]);
     setScreen('menu');
   };
@@ -142,15 +173,16 @@ export default function App() {
     }
   };
   const resetSave = () => {
-    clearSave();
+    if(!clearSave()){setSavedNote('Unable to reset save data. Try again.');return;}
     setSave(null);
+    setSaveStatus(readSave());
     if (screen === 'playing') {
       setStack([]);
       setScreen('menu');
     }
   };
   const updateSettings = (patch) => {
-    const next = { ...settings, ...patch };
+    const next = normalizeSettings({ ...settings, ...patch });
     setSettings(next);
     saveSettings(next);
   };
@@ -160,20 +192,31 @@ export default function App() {
     if (!stack.length) return null;
     if (screen === 'playing' && gameRef.current) return gameRef.current.getSnapshot();
     return snapshotFromState(save || createNewState());
-  }, [stack, screen, save]);
+  }, [stack, screen, save,revision]);
+  const onCommand=(name,...args)=>{const result=gameRef.current?.command(name,...args)||{ok:false,reason:'Start your adventure first.'};setSavedNote(result.reason);setRevision(r=>r+1);return result;};
 
   const renderOverlay = (name) => {
     switch (name) {
       case 'pause':
         return <PauseMenu onResume={close} onOpen={open} onSave={saveNow} onMainMenu={toMainMenu} savedNote={savedNote} />;
       case 'encyclopedia':
-        return <Encyclopedia snapshot={snapshot} onClose={close} />;
+        return <Encyclopedia snapshot={snapshot} initialEntry={entry} onClose={close} />;
       case 'map':
-        return <WorldMap snapshot={snapshot} onClose={close} />;
+        return <WorldMap snapshot={snapshot} onClose={close} onTravel={id=>{if(game?.fastTravel(id).ok)setStack([]);}} />;
       case 'quests':
-        return <QuestMenu snapshot={snapshot} onClose={close} />;
+        return <QuestMenu snapshot={snapshot} onClose={close} onTrack={id=>game?.trackQuest(id)} />;
       case 'inventory':
-        return <Inventory snapshot={snapshot} onClose={close} />;
+        return <Inventory snapshot={snapshot} onClose={close} onCommand={onCommand} onTool={id=>game?.equipTool(id)} />;
+      case 'maps':
+        return <Inventory snapshot={snapshot} initialTab="maps" onClose={close} onCommand={onCommand} onTool={id=>game?.equipTool(id)} />;
+      case 'shop': return <ExplorerShop snapshot={snapshot} onClose={close} onCommand={onCommand}/>;
+      case 'skills': return <SkillTree snapshot={snapshot} onClose={close} onCommand={onCommand}/>;
+      case 'achievements': return <AchievementGallery snapshot={snapshot} onClose={close}/>;
+      case 'progress': return <ProgressMenu snapshot={snapshot} onClose={close} onOpen={open}/>;
+      case 'profile': return <ProfilePicker snapshot={snapshot} onClose={close} onCommand={onCommand}/>;
+      case 'statistics': return <Statistics snapshot={snapshot} onClose={close}/>;
+      case 'social': return <SocialMenu snapshot={snapshot} game={game} onClose={close} onOpen={open} onCommand={onCommand}/>;
+      case 'continue': return <SaveSummary snapshot={snapshot} onClose={close} onContinue={onContinue}/>;
       case 'settings':
         return <Settings settings={settings} onChange={updateSettings} onResetSave={resetSave} onClose={close} />;
       case 'howto':
@@ -191,7 +234,7 @@ export default function App() {
 
   return (
     <div className="app">
-      {screen === 'menu' && <MainMenu save={save} onNew={onNew} onContinue={onContinue} onOpen={open} />}
+      {screen === 'menu' && <MainMenu save={save} settings={settings} saveStatus={saveStatus} sessionSummary={sessionSummary} onRetry={()=>{const result=readSave();setSaveStatus(result);setSave(result.state||null);}} onNew={onNew} onContinue={()=>open('continue')} onOpen={open} />}
 
       {screen === 'playing' && (
         <GameCanvas key={session} initialState={startState} settings={settings} onReady={onReady}>
@@ -199,13 +242,15 @@ export default function App() {
             <>
               <HUD game={g} touch={touch} onOpen={open} />
               <DialogueBox game={g} />
-              <DiscoveryPopup game={g} touch={touch} />
+              <RewardFeed game={g} onOpen={open}/>
+              <DiscoveryPopup game={g} touch={touch} onOpen={open}/>
             </>
           )}
         </GameCanvas>
       )}
 
-      {screen === 'playing' && touch && game && stack.length === 0 && <TouchControls game={game} />}
+      {screen === 'playing' && touch && game && stack.length === 0 && <TouchControls game={game} onOpen={open}/>}
+      {top==='ending'&&<style>{'.adventure-hud,.reward-feed,.discovery-feed,.touch{visibility:hidden}'}</style>}
 
       {top && snapshot && renderOverlay(top)}
 
@@ -216,7 +261,7 @@ export default function App() {
             <button className="btn danger small" onClick={startNew}>
               Start over
             </button>
-            <button className="btn ghost small" onClick={() => setConfirmNew(false)}>
+            <button className="btn ghost small" data-autofocus onClick={() => setConfirmNew(false)}>
               Cancel
             </button>
           </div>

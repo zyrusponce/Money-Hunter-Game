@@ -16,7 +16,7 @@ const objects = [
     script: {
       speaker: 'The Monument of Collectors',
       pages: ['A golden monument lists everything you discovered. Your name is at the very top.'],
-      effects: [{ type: 'showEnding' }],
+      effects: [{ type: 'setFlag', flag: 'final_monument_read' }],
     },
   },
   {

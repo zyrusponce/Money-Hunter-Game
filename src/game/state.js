@@ -1,8 +1,10 @@
 // The saved game state. Everything in here must be JSON-serialisable.
 import { START_ITEMS } from '../data/items.js';
 import { LOCATIONS, START_LOCATION } from '../data/locations.js';
+import { createRewardState } from './rewardState.js';
+import { seedLegacyRewards } from './rewards.js';
 
-export const SAVE_VERSION = 1;
+export const SAVE_VERSION = 2;
 
 // Feet position of the centre of a tile, in pixels.
 export const tileToPos = (tx, ty) => ({ x: tx * 16 + 8, y: ty * 16 + 14 });
@@ -26,7 +28,8 @@ export function createNewState() {
     visited: { [START_LOCATION]: true },
     notified: {},
     claimed: {},
-    stats: { playtime: 0, steps: 0, discoveries: 0, duplicatesFound: 0, searches: 0 },
+    stats: { playtime: 0, steps: 0, discoveries: 0, duplicatesFound: 0, searches: 0, distance: 0, chestsOpened: 0, secretsFound: 0, xpEarned: 0 },
+    progression: createRewardState(),
     complete: false,
     endingSeen: false,
     completionPercent: 0,
@@ -44,6 +47,11 @@ export function migrateState(raw) {
   }
   out.quests = { active: { ...(raw.quests?.active || {}) }, done: { ...(raw.quests?.done || {}) } };
   out.stats = { ...base.stats, ...(raw.stats || {}) };
+  out.progression = { ...base.progression, ...(raw.progression || {}) };
+  for (const k of ['claims','skills','purchases','cosmetics','badges','titles','equipped','explored','chests','mastered','friendship','events']) {
+    out.progression[k] = { ...base.progression[k], ...(raw.progression?.[k] || {}) };
+  }
+  if (!raw.progression) seedLegacyRewards(out);
   if (!LOCATIONS[out.map]) {
     out.map = base.map;
     out.x = base.x;

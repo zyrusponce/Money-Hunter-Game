@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react';
 
 // On-screen joystick and action button for phones and tablets.
-export default function TouchControls({ game }) {
+export default function TouchControls({ game,onOpen }) {
   const padRef = useRef(null);
   const [nub, setNub] = useState({ x: 0, y: 0 });
 
@@ -25,6 +25,7 @@ export default function TouchControls({ game }) {
 
   return (
     <div className="touch">
+      <div className="touch-extras"><button aria-label="Switch tool" onClick={()=>{const owned=['detector','shovel','flashlight'].filter(id=>game.s.items[id]);game.equipTool(owned[(owned.indexOf(game.s.progression.tool)+1)%owned.length]);}}>Tool</button><button aria-label="Open menu" onClick={()=>onOpen('pause')}>Menu</button></div>
       <div
         className="pad"
         ref={padRef}

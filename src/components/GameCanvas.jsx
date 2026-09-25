@@ -32,14 +32,11 @@ export default function GameCanvas({ initialState, settings, onReady, children }
       const w = wrap.clientWidth;
       const h = wrap.clientHeight;
       let sw = w;
-      let sh = (w * 9) / 16;
-      if (sh > h) {
-        sh = h;
-        sw = (h * 16) / 9;
-      }
+      let sh = h;
       stage.style.width = `${Math.floor(sw)}px`;
       stage.style.height = `${Math.floor(sh)}px`;
       stage.style.setProperty('--u', `${sw / 100}px`);
+      if(canvasRef.current){const logicalWidth=w<600?224:400;canvasRef.current.width=logicalWidth;canvasRef.current.height=Math.max(180,Math.round(logicalWidth*h/w));}
     };
     fit();
     const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(fit) : null;
@@ -52,7 +49,7 @@ export default function GameCanvas({ initialState, settings, onReady, children }
   }, []);
 
   return (
-    <div ref={wrapRef} style={{ position: 'absolute', inset: 0, display: 'grid', placeItems: 'center', padding: 6 }}>
+    <div ref={wrapRef} style={{ position: 'absolute', inset: 0, display: 'grid', placeItems: 'center' }}>
       <div className="stage" ref={stageRef}>
         <canvas ref={canvasRef} width={400} height={225} aria-label="Money Hunter game world" />
         {game && children(game)}

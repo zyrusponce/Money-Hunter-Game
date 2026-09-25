@@ -6,6 +6,9 @@ import { checkCond } from './conditions.js';
 import { hasLineOfSight } from './collisions.js';
 import { collect, defaultVerb } from './collectibles.js';
 import { audio } from './audio.js';
+import { modifiers } from './modifiers.js';
+import { QUEST_LIST, QUESTS } from '../data/quests.js';
+import { questStatus } from './quests.js';
 
 const FACE = { up: [0, -1], down: [0, 1], left: [-1, 0], right: [1, 0] };
 const OPPOSITE = { up: 'down', down: 'up', left: 'right', right: 'left' };
@@ -60,7 +63,7 @@ export function findTarget(game) {
         bc = c;
       }
     }
-    if (bd > RANGE[t.kind]) continue;
+    if (bd > RANGE[t.kind]+modifiers(s).interaction) continue;
     const dot = ((bx - px) * face[0] + (by - py) * face[1]) / (bd || 1);
     const score = bd - (dot > 0.35 ? 5 : 0);
     if (best && score >= best.score) continue;
@@ -99,9 +102,21 @@ export function interact(game) {
     case 'npc': {
       const def = NPCS[t.ref.id];
       if (!def) return;
+      s.flags[`met:${t.ref.id}`]=true;
+      game.rt.npcId=t.ref.id;
       t.ref.dir = OPPOSITE[s.dir] || 'down';
       const rule = def.dialogue.find((r) => checkCond(s, r.when));
-      if (rule) startScript(game, rule.script, def.name, def.title);
+      if (rule) {
+        const script=previewQuestOffers(rule.script);
+        for(const q of QUEST_LIST.filter(q=>q.giver===t.ref.id&&(q.chain||q.id==='final_journey'))) {
+          const status=questStatus(s,q.id);
+          if(status==='ready') script.choices.push({label:`Complete: ${q.name}`,script:{pages:[`Thank you! ${q.rewardText}`],effects:[{type:'completeQuest',id:q.id}]}});
+          else if(status==='new'&&checkCond(s,q.available))script.choices.push({label:q.name,script:{pages:[q.summary,`Rewards: ${q.rewardText}`],choices:[{label:'Accept quest',script:{pages:['Good luck out there.'],effects:[{type:'startQuest',id:q.id}]}},{label:'Maybe later',script:{pages:['Take your time.']}}]}});
+        }
+        script.choices.push({label:'Explorer shop & requests',script:{pages:[],effects:[{type:'openExplorer'}]}});
+        script.choices.push({label:'Continue exploring',script:{pages:[]}});
+        startScript(game,script,def.name,def.title);
+      }
       break;
     }
     case 'object':
@@ -109,7 +124,9 @@ export function interact(game) {
       else startScript(game, t.ref.script, t.ref.script?.speaker || '');
       break;
     case 'collectible':
-      collect(game, t.ref);
+      if((t.ref.requires==='shovel'||t.ref.look==='mound')&&s.items.shovel&&!s.collected[t.ref.id]) {
+        if(!game.rt.dig)game.rt.dig={collectible:t.ref,elapsed:0,duration:modifiers(s).digSeconds,x:s.x,y:s.y};
+      } else collect(game, t.ref);
       break;
     case 'barrier':
       tryBarrier(game, t.ref);
@@ -155,12 +172,13 @@ export function pullLever(game, obj) {
     return;
   }
   if (prog.length === puzzle.order.length) {
-    s.flags[solvedKey] = true;
+    game.rewardAction({id:solvedKey,cause:'Puzzle solved'},()=>{
+    game.setFlag(solvedKey);
     audio.sfx('unlock');
     game.say(puzzle.solvedText || 'You hear a click. Something opened.');
     applyEffects(game, puzzle.onSolve || []);
     game.touch();
-    game.save();
+    });
   }
 }
 
@@ -172,6 +190,17 @@ export const leverIsOn = (game, obj) => {
 };
 
 // ------------------------------------------------------------------ dialogue engine
+export function previewQuestOffers(source) {
+  const node={...source,pages:[...(source.pages||[])],choices:(source.choices||[]).map(c=>({...c,script:previewQuestOffers(c.script||{})}))};
+  const offers=(source.effects||[]).filter(e=>e.type==='startQuest'&&QUESTS[e.id]);
+  if(offers.length) {
+    for(const e of offers) {const q=QUESTS[e.id];node.pages.push(`${q.name} — Rewards: ${q.rewards.xp} XP · ${q.rewards.coins} Hunter Coins. ${q.rewardText}`);}
+    delete node.effects;
+    node.choices=[{label:'Accept quest',script:{pages:['Your journal has been updated.'],effects:source.effects}},{label:'Maybe later',script:{pages:[]}}];
+  }
+  return node;
+}
+
 const pageOf = (d) => {
   const p = d.script.pages[Math.min(d.page, d.script.pages.length - 1)];
   if (p === undefined) return { text: '', speaker: d.speaker };
@@ -300,6 +329,9 @@ export function applyEffect(game, e) {
       break;
     case 'openTrade':
       game.rt.pending.push({ type: 'trade' });
+      break;
+    case 'openExplorer':
+      game.rt.pending.push({type:'explorer'});
       break;
     case 'showEnding':
       game.rt.pending.push({ type: 'ending' });

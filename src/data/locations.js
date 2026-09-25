@@ -13,8 +13,10 @@ import cave from './maps/cave.js';
 import ruins from './maps/ruins.js';
 import secret from './maps/secret.js';
 import final from './maps/final.js';
+import { addExplorationContent } from './exploration.js';
 
 export const LOCATIONS = { town, market, beach, forest, abandoned, museum, harbor, island, city, cave, ruins, secret, final };
+addExplorationContent(LOCATIONS);
 export const LOCATION_LIST = Object.values(LOCATIONS);
 export const START_LOCATION = 'town';
 

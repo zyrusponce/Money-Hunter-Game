@@ -5,6 +5,7 @@
   "description": "Money Hunter - a 2D top-down exploration and collection game built with React and Vite.",
   "type": "module",
   "scripts": {
+    "test:rewards": "node --test scripts/tests/*.test.mjs",
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",

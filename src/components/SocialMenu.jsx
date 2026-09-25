@@ -1,0 +1,14 @@
+import { useState } from 'react';
+import Modal from './Modal.jsx';
+import { FRIENDS, FRIENDSHIP_BENEFITS } from '../game/friendship.js';
+import { EVENT_DEFS } from '../game/worldEvents.js';
+import { CURRENCY_BY_ID } from '../data/currencies.js';
+import { LOCATIONS } from '../data/locations.js';
+export default function SocialMenu({snapshot:s,game,onClose,onOpen,onCommand}) {
+  const [currency,setCurrency]=useState(''),[note,setNote]=useState(''),dupes=Object.entries(s.duplicates).filter(([,n])=>n>0);
+  const npc=game?.rt.npcId;
+  return <Modal title="People & Requests" onClose={onClose} wide><div className="menu-intro"><p>Share a find, follow a rumor, or prepare for the next journey.</p><button className="btn small" onClick={()=>onOpen('shop')}>Explorer Shop →</button></div><label className="field-label">Duplicate to offer<select className="select" value={currency} onChange={e=>setCurrency(e.target.value)}><option value="">Choose an owned duplicate</option>{dupes.map(([id,n])=><option key={id} value={id}>{CURRENCY_BY_ID[id]?.name} ×{n}</option>)}</select></label>{!dupes.length&&<p className="muted">Extra finds make thoughtful gifts. Keep exploring to collect duplicates.</p>}<div className="card-grid">{Object.entries(FRIENDS).map(([id,name])=>{
+    const rank=s.progression.friendship[id]||0,near=game?.rt.npcs.some(n=>n.id===id&&Math.hypot(n.x*16+8-game.s.x,n.y*16+14-game.s.y)<48);
+    return <article className="journal-card" key={id}><span className="eyebrow">FRIENDSHIP · {rank}/5</span><h3>{name}</h3><p>{FRIENDSHIP_BENEFITS.slice(0,rank).join(' · ')||'A new friend starts with a conversation.'}</p>{rank>=1&&<p className="clue">“East of the beach rocks, the quiet sand keeps a secret.”</p>}{rank>=5&&<p className="clue">“Beyond the ruins’ far gate, four legends wait in the gilded hall.”</p>}<button className="btn ghost small" disabled={!near||!currency||rank>=5} onClick={()=>{const r=onCommand('giftDuplicate',id,currency,`${id}:${currency}:${s.duplicates[currency]}:${rank}`);setNote(r.reason);}}>{rank>=5?'Trusted friend':near?'Give one duplicate':'Visit this friend to give a gift'}</button></article>;
+  })}</div><h3>Rumors worth following</h3><div className="card-grid">{EVENT_DEFS.filter(e=>s.progression.events[e.id]).map(e=><article className="journal-card" key={e.id}><span className="eyebrow">{LOCATIONS[e.area].name} · {s.progression.events[e.id].status}</span><h3>{e.name}</h3><p>{e.description}</p><p className="reward-preview">+{e.reward.xp} XP · +{e.reward.coins} coins</p><button className="btn ghost small" disabled={s.map!==e.area||s.progression.events[e.id].status==='done'||(e.id!=='rare_signal'&&!currency)} onClick={()=>setNote(game.resolveEvent(e.id,currency).reason)}>Complete request</button></article>)}</div>{!Object.keys(s.progression.events).length&&<p className="muted">Keep discovering. News travels with explorers.</p>}<p role="status">{note}</p></Modal>;
+}

@@ -1,46 +1,9 @@
-import { useState } from 'react';
+﻿import { useState } from 'react';
 import Modal from './Modal.jsx';
-
-function QuestCard({ q }) {
-  return (
-    <div className="quest">
-      <h4>{q.name}</h4>
-      <p>{q.summary}</p>
-      <ul>
-        {q.objectives.map((o) => (
-          <li key={o.id} className={o.complete ? 'done' : ''}>
-            {o.text}
-          </li>
-        ))}
-      </ul>
-      {q.rewardText && <div className="reward">Reward: {q.rewardText}</div>}
-    </div>
-  );
-}
-
-export default function QuestMenu({ snapshot, onClose }) {
-  const [tab, setTab] = useState('active');
-  const list = tab === 'active' ? snapshot.quests.active : snapshot.quests.done;
-  return (
-    <Modal title="Quests" onClose={onClose}>
-      <div className="tabs">
-        <button className={`btn small ${tab === 'active' ? '' : 'ghost'}`} onClick={() => setTab('active')}>
-          Active ({snapshot.quests.active.length})
-        </button>
-        <button className={`btn small ${tab === 'done' ? '' : 'ghost'}`} onClick={() => setTab('done')}>
-          Completed ({snapshot.quests.done.length})
-        </button>
-      </div>
-      <div className="stack">
-        {list.length === 0 && (
-          <p className="muted">
-            {tab === 'active' ? 'No active quests. Talk to people around the world, and look for the yellow ! above their heads.' : 'Nothing completed yet.'}
-          </p>
-        )}
-        {list.map((q) => (
-          <QuestCard key={q.id} q={q} />
-        ))}
-      </div>
-    </Modal>
-  );
+import { LOCATIONS } from '../data/locations.js';
+export default function QuestMenu({snapshot:s,onClose,onTrack}) {
+ const [tab,setTab]=useState('active');
+ const all=[...s.quests.active,...s.quests.done];
+ const list=tab==='active'?s.quests.active:tab==='completed'?s.quests.done:all.filter(q=>q.kind===tab);
+ return <Modal title="Quest Journal" onClose={onClose} wide><div className="tabs">{[['active','Active'],['completed','Completed'],['story','Story'],['side','Side Quests']].map(([id,label])=><button key={id} className={`chip ${tab===id?'on':''}`} onClick={()=>setTab(id)}>{label}</button>)}</div>{!list.length&&<div className="empty-state"><span>◇</span><h3>{tab==='active'?'No Active Quests':'Stories are waiting'}</h3><p>Explore the world and talk to people to discover new adventures.</p></div>}<div className="quest-grid">{list.map(q=><article className="journal-card quest-card" key={q.id}><span className="eyebrow">{q.kind==='story'?'STORY':'SIDE QUEST'} · {q.status==='done'?'✓ Completed':q.status==='ready'?'Ready to turn in':'In progress'}</span><h3>{q.name}</h3><p>{q.summary}</p><ul className="objective-list">{q.objectives.map(o=><li key={o.id} className={o.complete?'done':''}><span>{o.complete?'✓':'○'}</span><div>{o.text}{o.where&&<small>{LOCATIONS[o.where]?.name}</small>}</div></li>)}</ul><span className="reward-preview">Rewards: +{q.rewards.xp} XP · +{q.rewards.coins} Hunter Coins<br/>{q.rewardText}</span>{q.status!=='done'&&<button className="btn ghost small" onClick={()=>onTrack(s.progression.trackedQuest===q.id?null:q.id)}>{s.progression.trackedQuest===q.id?'✓ Tracked · Untrack':'Track quest'}</button>}</article>)}</div></Modal>;
 }

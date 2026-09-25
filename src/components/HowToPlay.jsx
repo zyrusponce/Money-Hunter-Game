@@ -21,7 +21,7 @@ export default function HowToPlay({ onClose }) {
           </span>
           <span>Interact: talk, search, dig, open, read</span>
           <span>
-            <kbd className="k">B</kbd> <kbd className="k">M</kbd> <kbd className="k">Q</kbd> <kbd className="k">I</kbd>
+            <kbd className="k">C</kbd> <kbd className="k">M</kbd> <kbd className="k">J</kbd> <kbd className="k">B</kbd>
           </span>
           <span>Encyclopedia, Map, Quests, Inventory</span>
           <kbd className="k">Esc</kbd>

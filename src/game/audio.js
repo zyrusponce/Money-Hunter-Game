@@ -178,6 +178,12 @@ class AudioManager {
       case 'quest':
         [523, 659, 784, 1046].forEach((f, i) => this.tone(f, 0.14, { type: 'triangle', vol: 0.26, delay: i * 0.09 }));
         break;
+      case 'level':
+        [392,494,587,784,988].forEach((f,i)=>this.tone(f,.18,{type:'triangle',vol:.24,delay:i*.09}));
+        break;
+      case 'achievement':
+        [784,988,1174].forEach((f,i)=>this.tone(f,.16,{type:'sine',vol:.24,delay:i*.12}));
+        break;
       case 'item':
         [659, 880, 1174].forEach((f, i) => this.tone(f, 0.12, { type: 'square', vol: 0.2, delay: i * 0.08 }));
         break;

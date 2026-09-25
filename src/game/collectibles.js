@@ -4,6 +4,9 @@ import { CURRENCIES } from '../data/currencies.js';
 import { checkCond } from './conditions.js';
 import { pickUndiscovered } from './progression.js';
 import { audio } from './audio.js';
+import { grantReward } from './rewards.js';
+import { CHEST_REWARDS } from '../data/exploration.js';
+import { modifiers } from './modifiers.js';
 
 export const SOLID_LOOKS = new Set(['chest', 'crate', 'barrel', 'vase', 'drawer', 'sack', 'box', 'vending']);
 
@@ -74,11 +77,23 @@ export function collect(game, c) {
     return;
   }
 
+  game.rewardAction({id:`spot:${c.id}`,cause:c.chestType?`${c.chestType[0].toUpperCase()+c.chestType.slice(1)} Chest opened`:c.secret?'Secret discovered':'Discovery'},receipt=>{
   s.collected[c.id] = true;
+  if(c.chestType||c.secret||c.reward) {
+    receipt.chestTier=c.chestType;
+    if(['ancient','legendary'].includes(c.chestType)){game.rt.shakeUntil=game.rt.time+.28;game.burst(cx,cy,c.chestType==='legendary'?'#ffcf56':'#b887ef',24);}
+    const base=c.reward||CHEST_REWARDS[c.chestType],mod=modifiers(s),multi=c.chestType?mod.chestMultiplier:1;
+    const reward={...base,xp:Math.round((base.xp||0)*multi),coins:Math.round((base.coins||0)*multi*(c.chestType?mod.coinMultiplier:1))};
+    if(grantReward(s,`spot:${c.id}`,reward,receipt)) {
+      if(c.chestType) {s.stats.chestsOpened++;s.progression.chests[c.id]=true;}
+      if(c.secret) s.stats.secretsFound++;
+    }
+  }
   const dig = c.requires === 'shovel' || c.look === 'mound';
   audio.sfx(c.look === 'chest' ? 'open' : dig ? 'dig' : 'pickup');
   game.burst(cx, cy, dig ? '#8a6a3a' : '#f2c14e', dig ? 14 : 8);
   if (c.currency) game.discover(c.currency, { source: c.id });
   else if (c.item) game.giveItem(c.item);
+  });
   game.touch();
 }

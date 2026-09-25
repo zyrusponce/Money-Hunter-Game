@@ -112,6 +112,26 @@ function paintPerson(g, dir, frame, pal) {
     if (beard) px(g, beard, right ? 8 : 5, 7, 3, 1);
   }
 
+  // Accessories share the sprite's position, facing and animation frame.
+  if (pal.backpack) {
+    const color=pal.backpack;
+    if (dir === 'up') {
+      px(g, ink, 4, 7, 8, 6);
+      px(g, color, 5, 7, 6, 5);
+      px(g, '#ffffff44', 6, 8, 4, 1);
+      px(g, '#00000033', 6, 10, 4, 2);
+    } else if (dir === 'down') {
+      // The pack is behind the torso; only its shoulder straps face the camera.
+      px(g, color, 5, 8, 1, 4);
+      px(g, color, 10, 8, 1, 4);
+    } else {
+      const x=dir === 'right'?3:10;
+      px(g, ink, x, 7, 3, 6);
+      px(g, color, x, 8, 3, 4);
+      px(g, '#ffffff44', x, 8, 2, 1);
+    }
+  }
+
   if (hat) {
     px(g, hatColor, 5, 0, 6, 2);
     px(g, hatColor, dir === 'right' ? 5 : 4, 2, dir === 'down' || dir === 'up' ? 8 : 7, 1);

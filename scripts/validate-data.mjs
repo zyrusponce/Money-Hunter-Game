@@ -62,7 +62,7 @@ for (const loc of LOCATION_LIST) {
     if (c.currency && !CURRENCY_BY_ID[c.currency]) err(`${loc.id}: collectible ${c.id} has unknown currency ${c.currency}`);
     if (c.item && !ITEMS[c.item]) err(`${loc.id}: collectible ${c.id} has unknown item ${c.item}`);
     if (c.requires && !ITEMS[c.requires]) err(`${loc.id}: collectible ${c.id} requires unknown item ${c.requires}`);
-    if (!c.currency && !c.item && !c.random) err(`${loc.id}: collectible ${c.id} gives nothing`);
+    if (!c.currency && !c.item && !c.random && !c.reward) err(`${loc.id}: collectible ${c.id} gives nothing`);
   }
   for (const ex of loc.exits) {
     if (!LOCATIONS[ex.to]) err(`${loc.id}: exit to unknown map ${ex.to}`);
@@ -251,6 +251,7 @@ function accessibleMaps() {
 const discover = (id) => {
   if (!sim.discovered[id]) {
     sim.discovered[id] = true;
+    if(completionPercent(sim)===100)sim.complete=true;
     return true;
   }
   return false;
@@ -299,6 +300,7 @@ while (changed && rounds++ < 60) {
     }
     for (const n of loc.npcs) {
       if (!at(n.x, n.y)) continue;
+      if(!sim.flags[`met:${n.id}`]) {sim.flags[`met:${n.id}`]=true;changed=true;}
       for (const rule of NPCS[n.id].dialogue) {
         const fx = [];
         collectEffects(rule.script, fx);

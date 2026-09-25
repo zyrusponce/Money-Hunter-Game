@@ -2,6 +2,7 @@
 import { PLAYER } from './player.js';
 import { blockedAt } from './collisions.js';
 import { audio } from './audio.js';
+import { modifiers } from './modifiers.js';
 
 export function movePlayer(game, dt, ix, iy, sprint) {
   const { s, rt } = game;
@@ -11,7 +12,8 @@ export function movePlayer(game, dt, ix, iy, sprint) {
   const len = Math.hypot(ix, iy);
   const dx = ix / len;
   const dy = iy / len;
-  const step = PLAYER.speed * (sprint ? PLAYER.sprint : 1) * dt;
+  const before={x:s.x,y:s.y};
+  const step = PLAYER.speed * modifiers(s).speed * (sprint ? PLAYER.sprint : 1) * dt;
   let moved = false;
 
   // horizontal
@@ -48,6 +50,8 @@ export function movePlayer(game, dt, ix, iy, sprint) {
   else if (iy !== 0) s.dir = iy < 0 ? 'up' : 'down';
 
   if (moved) {
+    s.stats.distance+=Math.hypot(s.x-before.x,s.y-before.y)/16;
+    if(s.progression.tutorial==='move') s.progression.tutorial='approach';
     rt.moving = true;
     rt.walkT += dt * (sprint ? 1.35 : 1);
     rt.stepDist += step;

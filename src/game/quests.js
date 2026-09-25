@@ -4,6 +4,8 @@ import { QUESTS, QUEST_LIST } from '../data/quests.js';
 import { ITEMS } from '../data/items.js';
 import { checkCond, questObjectivesDone } from './conditions.js';
 import { audio } from './audio.js';
+import { grantReward } from './rewards.js';
+import { friendshipQuest } from './friendship.js';
 
 export function questStatus(s, id) {
   if (s.quests.done[id]) return 'done';
@@ -51,8 +53,9 @@ export function npcMarker(s, npcId) {
 export function startQuest(game, id) {
   const q = QUESTS[id];
   const s = game.s;
-  if (!q || s.quests.active[id] || s.quests.done[id]) return;
+  if (!q || s.quests.active[id] || s.quests.done[id] || !checkCond(s,q.available)) return;
   s.quests.active[id] = { startedAt: Math.round(s.stats.playtime) };
+  if(!s.progression.trackedQuest)s.progression.trackedQuest=id;
   audio.sfx('quest');
   game.toast(`New quest: ${q.name}`, 'quest');
   game.touch();
@@ -62,14 +65,18 @@ export function startQuest(game, id) {
 export function completeQuest(game, id) {
   const q = QUESTS[id];
   const s = game.s;
-  if (!q || s.quests.done[id]) return;
+  if (!q || s.quests.done[id] || !s.quests.active[id] || !questObjectivesDone(s,q)) return;
+  game.rewardAction({id:`quest:${id}`,cause:`Quest complete: ${q.name}`},r=>{
   s.quests.done[id] = true;
   delete s.quests.active[id];
+  if(s.progression.trackedQuest===id)s.progression.trackedQuest=null;
+  grantReward(s,`quest:${id}`,{xp:q.rewards.xp??150,coins:q.rewards.coins??100,cosmetics:q.rewards.cosmetics,titles:q.rewards.titles},r);
+  friendshipQuest(s,q.giver,id);
   for (const item of q.rewards.consume || []) delete s.items[item];
   audio.sfx('quest');
-  game.toast(`Quest complete: ${q.name}`, 'quest');
   for (const item of q.rewards.items || []) game.giveItem(item);
   for (const cur of q.rewards.currencies || []) game.discover(cur, { source: 'quest' });
+  });
   game.touch();
   game.save();
 }

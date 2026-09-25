@@ -17,6 +17,7 @@ export default function EncyclopediaEntry({ currency, found, dupes, selected, on
         <CurrencyIcon currency={currency} silhouette={!found} />
       </span>
       <span className="name">{found ? currency.name : '???'}</span>
+      <small className="entry-country">{found?currency.origin:'Undiscovered'}</small><small className="entry-rarity">★ {currency.rarity}</small>
     </button>
   );
 }
@@ -42,7 +43,7 @@ export function Specimen({ currency, found, dupes }) {
       <h3>{found ? currency.name : '???'}</h3>
       <div className="center">
         <span className="rarity-tag" style={{ '--rc': info.color }}>
-          {currency.rarity}
+          ★ {currency.rarity}
         </span>
       </div>
       <dl>

@@ -1,5 +1,8 @@
-// Shared full-screen modal frame used by most menus.
+import { useRef } from 'react';
+import useDialogFocus from './useDialogFocus.js';
+// Shared journal panel; the world stays visible around it.
 export default function Modal({ title, onClose, wide = false, children }) {
+  const ref=useRef(null);useDialogFocus(ref);
   return (
     <div
       className="overlay"
@@ -7,12 +10,12 @@ export default function Modal({ title, onClose, wide = false, children }) {
         if (e.target === e.currentTarget && onClose) onClose();
       }}
     >
-      <div className={`modal${wide ? ' wide' : ''}`} role="dialog" aria-modal="true" aria-label={title}>
+      <div ref={ref} tabIndex={-1} className={`modal${wide ? ' wide' : ''}`} role="dialog" aria-modal="true" aria-label={title}>
         <div className="modal-head">
-          <h2>{title}</h2>
+          <div><span className="eyebrow">EXPLORER’S FIELD JOURNAL</span><h2>{title}</h2></div>
           {onClose && (
             <button className="close-x" onClick={onClose} aria-label="Close">
-              X
+              ✕ <span className="key-hint">Esc</span>
             </button>
           )}
         </div>

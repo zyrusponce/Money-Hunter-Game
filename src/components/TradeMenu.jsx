@@ -53,6 +53,7 @@ export default function TradeMenu({ game, onClose }) {
                 <b>{o.title}</b>
                 <br />
                 <span>{o.desc}</span>
+                {o.preview&&<p className="reward-preview">You receive: {o.preview}</p>}
               </div>
               <button className="btn small" disabled={!o.affordable || !o.remaining} onClick={() => run(() => game.trade(o.id))}>
                 {o.remaining ? `Trade ${o.cost}` : 'Complete'}

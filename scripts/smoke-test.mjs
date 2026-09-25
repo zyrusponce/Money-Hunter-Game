@@ -118,13 +118,15 @@ g.rt.keys.clear();
 console.log('Collecting');
 g = newGame();
 const popups = events(g, 'popup');
+const rewards = events(g, 'reward');
+const notices = events(g, 'toast');
 put(g, 8, 10);
 frames(g, 3);
 ok(g.rt.target && g.rt.target.kind === 'collectible', 'a visible pickup is targetable');
 press(g);
 frames(g, 2);
-ok(g.rt.mode === 'popup', 'discovery popup opens');
-ok(popups.some((p) => p && p.type === 'discovery' && p.currency.id === 'php1'), 'popup is NEW MONEY for php1');
+ok(g.rt.mode === 'explore', 'common discovery keeps gameplay active');
+ok(rewards.some((p) => p && p.currencyId === 'php1'), 'grouped reward identifies php1');
 ok(g.s.discovered.php1, 'php1 discovered');
 g.dismissPopup();
 ok(g.rt.mode === 'explore', 'popup dismissed');
@@ -133,7 +135,7 @@ ok(g.s.collected.town_php1, 'spot marked as collected');
 g.discover('php1');
 frames(g, 2);
 ok(g.s.duplicates.php1 === 1, 'duplicate tracked');
-ok(popups.some((p) => p && p.type === 'duplicate'), 'duplicate popup shown');
+ok(notices.some((p) => p.text.includes('Duplicate found')), 'duplicate feedback is nonblocking');
 dismissAll(g);
 
 // ------------------------------------------------------------------ detector
@@ -167,7 +169,7 @@ g.touch();
 put(g, 5, 21);
 g.update(0.016);
 press(g);
-frames(g, 2);
+frames(g, 30);
 ok(g.s.discovered.gbp_farthing, 'buried money found with the shovel');
 dismissAll(g);
 

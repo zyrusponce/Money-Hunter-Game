@@ -130,4 +130,12 @@ export const ITEMS = {
   },
 };
 
+for (const [id,name,description,category] of [
+  ['coastal_map','Tideworn Treasure Map','East of the great rocks, search the quiet sand before the fishing boat.','maps'],
+  ['rare_treasure_map','Forest Treasure Map','South of the forest pond, search the central clearing.','maps'],
+  ['mystery_map',"The Collector’s Map",'The old hall remembers every collector. Read its monument and search the eastern wing.','maps'],
+  ['legendary_map','Legendary Treasure Hunt','Where four pedestals guard the gilded hall, search north of the keeper.','maps'],
+  ['legendary_detector','Legendary Detector Upgrade','Extends Legendary detection range.','tools'],
+  ['treasure_radar','Treasure Detector Upgrade','Sense nearby treasure chests. Earned by exploring 75% of the world.','tools'],
+]) ITEMS[id]={id,name,description,category,icon:category==='maps'?'▧':'⌁'};
 export const START_ITEMS = ['detector', 'world_map'];

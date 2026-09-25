@@ -2,6 +2,7 @@ import { useState } from 'react';
 import Modal from './Modal.jsx';
 import { LOCATION_LIST, WORLD_LINKS, LOCATIONS } from '../data/locations.js';
 import { CURRENCIES } from '../data/currencies.js';
+import ProgressBar from './ProgressBar.jsx';
 
 const ICONS = {
   town: '\u{1F3E0}',
@@ -30,7 +31,7 @@ function isKnown(id, snap) {
   return true;
 }
 
-export default function WorldMap({ snapshot, onClose }) {
+export default function WorldMap({ snapshot, onClose, onTravel }) {
   const [selected, setSelected] = useState(snapshot.map);
   const pct = snapshot.percent;
   const sel = LOCATIONS[selected];
@@ -75,7 +76,7 @@ export default function WorldMap({ snapshot, onClose }) {
               const here = snapshot.map === l.id;
               const marks = snapshot.markers[l.id];
               return (
-                <g key={l.id} className="node" transform={`translate(${l.mapPos.x} ${l.mapPos.y})`} onClick={() => setSelected(l.id)}>
+                <g key={l.id} role="button" tabIndex={0} aria-label={`${known?l.name:'Undiscovered area'}${here?', current location':''}`} onKeyDown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();setSelected(l.id);}}} className="node" opacity={snapshot.visited[l.id]?1:.48} transform={`translate(${l.mapPos.x} ${l.mapPos.y})`} onClick={() => setSelected(l.id)}>
                   {here && <circle className="you" r="5" fill="none" stroke="#62d26f" strokeWidth="0.9" />}
                   <circle className="base" r="3.6" fill={!known ? '#3a4658' : unlocked ? '#f2c14e' : '#6c7a8e'} stroke={selected === l.id ? '#ffffff' : '#050d18'} strokeWidth={selected === l.id ? 1 : 0.7} />
                   <text className="ico" y="1.5" textAnchor="middle" style={{ fontSize: '4px', stroke: 'none' }}>
@@ -123,7 +124,7 @@ export default function WorldMap({ snapshot, onClose }) {
                   Money found here: {foundHere} / {totalHere}
                 </p>
               )}
-              {sel.landmarks && sel.landmarks.length > 0 && (
+              {snapshot.visited[selected]&&snapshot.progression.purchases.map_upgrade&&sel.landmarks && sel.landmarks.length > 0 && (
                 <p>
                   <b>Landmarks:</b> {sel.landmarks.join(', ')}
                 </p>
@@ -133,6 +134,9 @@ export default function WorldMap({ snapshot, onClose }) {
                   <b>Quest:</b> {q}
                 </p>
               ))}
+              {snapshot.visited[selected]&&<div className="area-stats">{Object.entries(snapshot.areas[selected]).filter(([,v])=>v&&typeof v==='object'&&v.total>0).map(([label,v])=><ProgressBar key={label} label={label==='currencies'?'Currency spots':label} value={v.count} total={v.total}/>)}<strong>{snapshot.areas[selected].percent}% Area Completion</strong></div>}
+              <button className="btn small" disabled={!snapshot.travel[selected].ok||snapshot.map===selected||!onTravel} onClick={()=>onTravel(selected)}>{snapshot.map===selected?'You are here':snapshot.travel[selected].ok?'Fast Travel →':'Travel point undiscovered or locked'}</button>
+              {!snapshot.travel[selected].ok&&<p className="muted">{snapshot.travel[selected].reason}</p>}
             </>
           ) : (
             <p>A place you have not heard about yet. Keep exploring, and keep collecting.</p>
